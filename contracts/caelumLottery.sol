@@ -94,6 +94,10 @@ contract CaelumLottery is Ownable {
     uint public lotteryDuration;
     uint public lotteryMinParticipants;
 
+    mapping (address => uint) public participantsList;
+
+    address[] public participants;
+
     // Checks if still in lottery contribution period
     modifier lotteryOngoing() {
         require(now < lotteryStart + lotteryDuration);
@@ -120,8 +124,11 @@ contract CaelumLottery is Ownable {
 
     }
 
+    // Allow only 0.05 Ether deposits, one at a time.
     function participateLottery () lotteryOngoing public returns (bool success) {
-
+        require(msg.value == 50 finney, "Wrong amount sent.")
+        participantsList[msg.sender] = msg.value;
+        participants.push(msg.sender);
     }
 
     // Generally not safe to use the blockhash since this can be tampered by
