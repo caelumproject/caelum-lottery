@@ -81,10 +81,11 @@ contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-contract CaelumLottery {
+contract CaelumLottery is Ownable {
 
     // What tokens will we send?
     address public token = 0;
+    address public poolAddress = 0;
 
     // How many users are participating for the lottery
     uint public participantsCounter;
@@ -106,15 +107,16 @@ contract CaelumLottery {
     }
 
 
-    constructor () {
-
+    constructor (address _tokenForLottery, address _payoutAddress) public {
+        token = _tokenForLottery;
+        poolAddress = _payoutAddress;
     }
 
-    function () payable {
+    function () payable public {
         participateLottery();
     }
 
-    function resetLottery () {
+    function resetLottery () public {
 
     }
 
@@ -125,12 +127,12 @@ contract CaelumLottery {
     // Generally not safe to use the blockhash since this can be tampered by
     // miners. The cost to tamper this however is nowhere near the cost of mining
     // a full ethereum block, so there is no incentive to do this right now.
-    function announceWinners () {
+    function announceWinners () public {
 
     }
 
-    function creditWinners () {
-        if(!ERC20Interface(token).transfer(msg.sender, tokens)) revert();
+    function creditWinners () public {
+        if(!ERC20Interface(token).transfer(msg.sender, 50)) revert();
     }
 
 
