@@ -104,38 +104,67 @@ contract CaelumLottery is Ownable {
         _;
     }
 
-    // Checks if lottery has finished
+    // Checks if lottery has finished AND the total amount of participants
+    // equals at least the mininmum required participants.
     modifier lotteryFinished() {
         require(now > lotteryStart + lotteryDuration);
         _;
     }
 
+    modifier lotteryCompleted() {
+        require(now > lotteryStart + lotteryDuration && participantsCounter >= lotteryMinParticipants);
+        _;
+    }
 
-    constructor (address _tokenForLottery, address _payoutAddress) public {
-        token = _tokenForLottery;
-        poolAddress = _payoutAddress;
+    uint public WINNER1;
+    uint public WINNER2;
+    uint public WINNER3;
+
+    constructor () public {
+        //token = _tokenForLottery;
+        //poolAddress = _payoutAddress;
+        participantsCounter = 70;
     }
 
     function () payable public {
         participateLottery();
     }
 
-    function resetLottery () public {
-
+    function resetLottery (uint _days, uint _participants) onlyOwner lotteryFinished public {
+        lotteryStart = now;
+        lotteryDuration = _days * 1 days;
+        lotteryMinParticipants = _participants;
+        participantsCounter = 70;
     }
 
     // Allow only 0.05 Ether deposits, one at a time.
-    function participateLottery () lotteryOngoing public returns (bool success) {
-        require(msg.value == 50 finney, "Wrong amount sent.")
+    function participateLottery () payable lotteryOngoing public returns (bool success) {
+        require(msg.value == 50 finney, "Wrong amount sent.");
         participantsList[msg.sender] = msg.value;
         participants.push(msg.sender);
+        participantsCounter++;
+        return true;
     }
 
     // Generally not safe to use the blockhash since this can be tampered by
     // miners. The cost to tamper this however is nowhere near the cost of mining
     // a full ethereum block, so there is no incentive to do this right now.
-    function announceWinners () public {
+    // Leave this public so anyone can call the end of the lottery.
+    //
+    // This is just a quick and dirty solution, do not use this code on valuable items!
 
+    function announceWinners () lotteryCompleted  public  returns (uint) {
+        //require(participantsCounter >= lotteryMinParticipants);
+
+        WINNER1 = random(1);
+        WINNER2 = random(2);
+        WINNER3 = random(3);
+
+    }
+
+    function random(uint blocksPast) internal returns (uint) {
+        uint randomnumber = uint(block.blockhash(block.number - blocksPast)) % participantsCounter + 1;
+        return randomnumber;
     }
 
     function creditWinners () public {
