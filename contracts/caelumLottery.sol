@@ -1,5 +1,6 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.4.24;
 
+import "./libs/StandardToken.sol";
 
 contract Ownable {
   address private _owner;
@@ -81,6 +82,17 @@ contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
+contract mockToken is StandardToken {
+    string public symbol = "CLM";
+    string public name = "Caelum Token";
+    uint8 public decimals = 8;
+    uint256 public totalSupply = 2100000000000000;
+
+    constructor () {
+        balances[msg.sender] = balances[msg.sender].add(100000 * 1e8);
+    }
+}
+
 contract CaelumLottery is Ownable {
 
     // What tokens will we send?
@@ -93,6 +105,8 @@ contract CaelumLottery is Ownable {
     uint public lotteryStart;
     uint public lotteryDuration;
     uint public lotteryMinParticipants;
+
+    bool winnersAnnounced;
 
     mapping (address => uint) public participantsList;
 
@@ -112,7 +126,7 @@ contract CaelumLottery is Ownable {
     }
 
     modifier lotteryCompleted() {
-        require(now > lotteryStart + lotteryDuration && participantsCounter >= lotteryMinParticipants);
+        require(now > lotteryStart + lotteryDuration && participants.length >= lotteryMinParticipants, "Require failed");
         _;
     }
 
@@ -121,9 +135,7 @@ contract CaelumLottery is Ownable {
     uint public WINNER3;
 
     constructor () public {
-        //token = _tokenForLottery;
-        //poolAddress = _payoutAddress;
-        participantsCounter = 70;
+        //participantsCounter = 0;
     }
 
     function () payable public {
@@ -134,7 +146,7 @@ contract CaelumLottery is Ownable {
         lotteryStart = now;
         lotteryDuration = _days * 1 days;
         lotteryMinParticipants = _participants;
-        participantsCounter = 70;
+        winnersAnnounced = false;
     }
 
     // Allow only 0.05 Ether deposits, one at a time.
@@ -142,7 +154,6 @@ contract CaelumLottery is Ownable {
         require(msg.value == 50 finney, "Wrong amount sent.");
         participantsList[msg.sender] = msg.value;
         participants.push(msg.sender);
-        participantsCounter++;
         return true;
     }
 
@@ -154,21 +165,33 @@ contract CaelumLottery is Ownable {
     // This is just a quick and dirty solution, do not use this code on valuable items!
 
     function announceWinners () lotteryCompleted  public  returns (uint) {
-        //require(participantsCounter >= lotteryMinParticipants);
+        require (!winnersAnnounced, "Not completed");
 
         WINNER1 = random(1);
         WINNER2 = random(2);
         WINNER3 = random(3);
 
+        winnersAnnounced = true;
     }
 
-    function random(uint blocksPast) internal returns (uint) {
-        uint randomnumber = uint(block.blockhash(block.number - blocksPast)) % participantsCounter + 1;
+    function random(uint blocksPast) internal view returns (uint) {
+        uint randomnumber = uint(blockhash(block.number - blocksPast)) % participants.length;
         return randomnumber;
     }
 
     function creditWinners () public {
-        if(!ERC20Interface(token).transfer(msg.sender, 50)) revert();
+        uint totalTokenAmount = ERC20Interface(token).balanceOf(this);
+
+        uint amountWinner1 = totalTokenAmount / 100 * 50;
+        uint amountWinner2 = totalTokenAmount / 100 * 30;
+        uint amountWinner3 = totalTokenAmount / 100 * 20;
+
+        totalTokenAmount = 0;
+
+        if(!ERC20Interface(token).transfer(participants[WINNER1], amountWinner1)) revert();
+        if(!ERC20Interface(token).transfer(participants[WINNER2], amountWinner2)) revert();
+        if(!ERC20Interface(token).transfer(participants[WINNER3], amountWinner3)) revert();
+
     }
 
 
